@@ -1,0 +1,1 @@
+This is a fork of my actual Home Automation setup that I use to prepare my Raspberry PI's and to deploy my Docker containers.

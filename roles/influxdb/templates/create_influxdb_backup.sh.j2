@@ -1,0 +1,5 @@
+current_date=$(date +%F)
+
+mkdir /mnt/usbdrive/influxdb_backup/$current_date
+
+docker exec influxdb_{{ influxdb.version }} influxd backup -portable  -database {{ influxdb.database_name }} /backup/$current_date

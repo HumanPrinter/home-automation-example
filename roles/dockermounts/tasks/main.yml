@@ -1,0 +1,45 @@
+- name: Ensure the dockermnt directory exists
+  file:
+    path: /dockermnt
+    state: directory
+    owner: "{{ management_user }}"
+    group: docker
+    mode: "775"
+  become: yes
+  tags: [docker-mounts]
+
+- name: Create mount directories
+  file:
+    path: "/dockermnt/{{ item.source }}"
+    state: directory
+    owner: "{{ item.owner | default(management_user) }}"
+    group: "{{ item.group | default('docker') }}"
+    mode: "{{ item.mode | default('775') }}"
+  become: yes
+  loop: "{{ mounts | default([]) }}"
+  when: "item.type | default('directory') == 'directory'"
+  tags: [docker-mounts]
+
+- name: Ensure template destinations exist
+  file:
+    path: "/dockermnt/{{ item.dest | dirname }}"
+    state: directory
+    owner: "{{ management_user }}"
+    group: "{{ item.group | default('docker') }}"
+    mode: "775"
+  become: yes
+  loop: "{{ templates }}"
+  when: "templates is defined and (condition | default(True))"
+  tags: [docker-mounts]
+
+- name: Create files from templates
+  template:
+    dest: "/dockermnt/{{ item.dest }}"
+    src: "{{ item.src }}"
+    owner: "{{ management_user }}"
+    group: "{{ item.group | default('docker') }}"
+    mode: "{{ item.mode | default('755') }}"
+  become: yes
+  loop: "{{ templates }}"
+  when: "templates is defined and (condition | default(True))"
+  tags: [docker-mounts]

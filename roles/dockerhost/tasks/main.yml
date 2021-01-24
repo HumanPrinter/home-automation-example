@@ -1,0 +1,34 @@
+- include: install.yml
+  tags: [docker, docker-install]
+
+- name: Make sure the management user is member of the Docker group
+  user:
+    name: "{{ management_user }}"
+    append: yes
+    groups: docker
+  become: yes
+  register: config_result
+  tags: [docker, docker-config]
+
+- name: reboot machine # noqa 503 - Rebooting needs to happen at this point and not after all tasks are finished
+  reboot:
+    test_command: whoami
+    reboot_timeout: 300
+    msg: Reboot initiated by Ansible
+  become: yes
+  when: config_result.changed
+  tags: [docker, docker-config, reboot]
+
+- name: Install pip3
+  apt:
+    update_cache: yes
+    name: "python3-pip"
+    state: present
+  become: yes
+  tags: [docker, dependencies]
+
+- name: Install Docker SDK for Python
+  pip:
+    name: docker
+    state: present
+  tags: [docker, dependencies]

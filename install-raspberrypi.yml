@@ -1,0 +1,6 @@
+- hosts: raspberrypi
+  roles:
+  - role: ssh
+  - role: common_tasks
+  - role: common_tools
+  - role: dockerhost

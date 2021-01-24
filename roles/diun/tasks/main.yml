@@ -1,0 +1,36 @@
+# - name: Include vaulted variables
+#   include_vars: vault.yml
+#   tags: [docker-mounts]
+
+- include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    mounts:
+    - { source: diun/ }
+  tags: [docker-mounts]
+
+- include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "diun"
+    container_image: "crazymax/diun"
+    container_tag: "{{ diun.version }}"
+    environment_variables:
+      TZ: "Europe/Amsterdam"
+      LOG_LEVEL: "info"
+      LOG_JSON: "false"
+      DIUN_WATCH_WORKERS: "2"
+      DIUN_WATCH_SCHEDULE: "0 */4 * * *"
+      DIUN_PROVIDERS_DOCKER: "true"
+      DIUN_NOTIF_SLACK_WEBHOOKURL: "https://hooks.slack.com/services/SOMETHING/SOMETHING_ELSE"
+    labels:
+      diun.enable: "true"
+      diun.watch_repo: "true"
+      diun.include_tags: "^\\d+(\\.\\d+)+$"
+      diun.max_tags: "10"
+    mounts:
+    - { source: /dockermnt/diun/, target: /data/, read_only: "no", type: bind }
+    - { source: /var/run/docker.sock, target: /var/run/docker.sock, read_only: "yes", type: bind }
+  tags: [docker-container]

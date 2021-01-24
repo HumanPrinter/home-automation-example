@@ -1,0 +1,8 @@
+- name: Run apt-get update # noqa 403 - This task is specifically created to perform an apt full-upgrade
+  apt:
+    autoremove: yes
+    state: latest
+    update_cache: yes
+    upgrade: full
+  become: yes
+  tags: [apt]

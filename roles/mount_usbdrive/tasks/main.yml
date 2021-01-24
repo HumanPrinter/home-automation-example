@@ -1,0 +1,34 @@
+- name: Create a list of available mounts
+  set_fact:
+    available_mounts: "{{ ansible_mounts|json_query('[].mount') }}"
+  tags: [mount-usbdrive]
+
+- meta: end_play
+  when: "not available_mounts is defined or mount_path | default('/mnt/usbdrive') in available_mounts"
+  tags: [mount-usbdrive]
+
+- name: Create a list of mountable partitions
+  set_fact:
+    mountable_partitions: "{{ ansible_devices | json_query(query) }}"
+  vars:
+    query: "{{ mount_device }}.partitions"
+  tags: [mount-usbdrive]
+
+- name: Make sure the mount-device is available
+  assert:
+    that:
+    - mount_device in ansible_devices
+    - mount_partition in mountable_partitions
+    fail_msg: "The expected device is not available or does not contain the expected partition"
+    success_msg: "The expected device and partiton is available"
+  tags: [mount-usbdrive]
+
+- name: Mount File System
+  mount:
+    path: "{{ mount_path | default('/mnt/usbdrive') }}"
+    src: "/dev/{{ mount_partition }}"
+    fstype: vfat
+    state: mounted
+    opts: defaults,auto,users,rw,nofail,umask=0
+  become: yes
+  tags: [mount-usbdrive]

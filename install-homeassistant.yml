@@ -1,0 +1,19 @@
+- hosts: homeassistant
+  roles:
+  - role: ssh
+  - role: common_tasks
+  - role: common_tools
+  - role: custom_tools
+    install_tools:
+    - libffi-dev
+    - libssl-dev
+    - python3
+    - python3-pip
+    remove_tools:
+    - python-configparser
+    pip_tools:
+    - docker-compose
+  - role: dockerhost
+  - role: mount_usbdrive
+    mount_device: sda
+    mount_partition: sda1

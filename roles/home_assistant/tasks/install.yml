@@ -1,0 +1,76 @@
+# Restore snapshot
+- name: Configure the Docker daemon
+  copy:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+  notify: restart docker
+  tags: [home-assistant, home-assistant-install, home-assistant-docker]
+
+- name: Run the handlers
+  meta: flush_handlers
+
+- name: Install some common tools
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: present
+  become: yes
+  loop:
+  - apparmor-utils
+  - apt-transport-https
+  - avahi-daemon
+  - ca-certificates
+  - curl
+  - dbus
+  - jq
+  - network-manager
+  - socat
+  - software-properties-common
+  tags: [home-assistant, home-assistant-install]
+
+- name: Disable ModemManager
+  service:
+    name: ModemManager
+    enabled: false
+  become: yes
+  tags: [home-assistant, home-assistant-install]
+
+- name: Check for existence of Home-Assistant installation marker
+  stat:
+    path: /root/.home_assistant_installed
+  become: yes
+  register: home_assistant_installed
+  tags: [home-assistant, home-assistant-install]
+
+- name: Download Home-Assistant install script
+  get_url:
+    url: https://raw.githubusercontent.com/home-assistant/supervised-installer/master/installer.sh
+    dest: /tmp/installer.sh
+    mode: "a+x"
+  when: "not home_assistant_installed.stat.exists"
+  tags: [home-assistant, home-assistant-install]
+
+- name: Execute the Home-Assistant install script
+  command: /bin/bash /tmp/installer.sh -m raspberrypi3 -d /dockermnt/hassio/
+  become: yes
+  when: "not home_assistant_installed.stat.exists"
+  tags: [home-assistant, home-assistant-install]
+
+- name: Remove the install script
+  file:
+    path: /tmp/installer.sh
+    state: absent
+  tags: [home-assistant, home-assistant-install]
+
+- name: Save a file to mark the installation of Home-Assistant
+  file:
+    path: /root/.home_assistant_installed
+    state: touch
+    mode: 0444
+  become: yes
+  when: "not home_assistant_installed.stat.exists"
+  tags: [home-assistant, home-assistant-install]

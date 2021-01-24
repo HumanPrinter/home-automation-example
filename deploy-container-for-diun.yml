@@ -1,0 +1,4 @@
+- hosts: diun_nodes
+  gather_facts: no
+  roles:
+  - role: diun

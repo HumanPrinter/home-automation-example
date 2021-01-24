@@ -1,0 +1,141 @@
+- hosts: all
+  tasks:
+  - name: Change the password for user 'pi'
+    user:
+      name: pi
+      password: "{{ ansible_become_pass | password_hash('sha512', '444444442211') }}"
+    become: yes
+    tags: [password]
+
+  - name: Set the hostname (step 1 of 2) - Change /etc/hostname
+    copy:
+      dest: /etc/hostname
+      content: "{{ hostname }}"
+    become: yes
+    register: host_name
+    tags: [hostname]
+
+  - name: Set the hostname (step 2 of 2) - Change /etc/hosts
+    lineinfile:
+      path: /etc/hosts
+      line: "127.0.1.1\t{{ hostname }}"
+      regexp: "^127\\.0\\.1\\.1\\s+(?!localhost)\\w+$"
+    become: yes
+    tags: [hostname]
+
+  - name: Change the timezone (step 1 of 2) - Change timezone
+    timezone:
+      name: Europe/Amsterdam
+    register: timezone_result
+    become: yes
+    tags: [timezone]
+
+  - name: Change the timezone (step 2 of 2) - Run dpkg-reconfigure
+    shell: dpkg-reconfigure -f noninteractive tzdata
+    become: yes
+    when: timezone_result.changed
+    tags: [timezone]
+
+  - name: Change the WiFi country (step 1 of 2) - Get current country setting
+    shell: 'wpa_cli -i wlan0 get country'
+    become: yes
+    register: wifi_country
+    tags: [wifi]
+
+  - name: Change the WiFi country (step 2 of 2) - Change WiFi country
+    shell: "{{ item }}"
+    loop:
+    - 'wpa_cli -i wlan0 set country "NL"'
+    - 'wpa_cli -i wlan0 save_config'
+    - 'rfkill unblock wifi'
+    become: yes
+    when: wifi_country.stdout != 'NL'
+    tags: [wifi]
+
+  - name: Set the memory-split
+    lineinfile:
+      path: /boot/config.txt
+      line: gpu_mem=16
+      regexp: "^gpu_mem=\\d+"
+    register: memory_split
+    become: yes
+    tags: [memory-split]
+
+  - name: Set the locale (step 1 of 3)
+    lineinfile:
+      path: /etc/locale.gen
+      line: "{{ item.line }}"
+      regexp: "{{ item.regexp }}"
+    loop:
+    - { line: "nl_NL.UTF-8 UTF-8",      regexp: "^# nl_NL.UTF-8 UTF-8$" }
+    - { line: "nl_NL@euro ISO-8859-15", regexp: "^# nl_NL@euro ISO-8859-15$" }
+    - { line: "en_GB.UTF-8 UTF-8",      regexp: "^# en_GB.UTF-8 UTF-8$" }
+    become: yes
+    register: generated_locales
+    tags: [locale]
+
+  - name: Set the locale (step 2 of 3)
+    lineinfile:
+      path: /etc/default/locale
+      line: "LANG=en_GB.UTF-8"
+      regexp: "^LANG=.*"
+    register: default_locale
+    become: yes
+    tags: [locale]
+
+  - name: Set the locale (step 3 of 3)
+    shell: dpkg-reconfigure -f noninteractive locales
+    become: yes
+    when: generated_locales.changed or default_locale.changed
+    tags: [locale]
+
+  - name: Configure keyboard (step 1 of 2)
+    lineinfile:
+      path: /etc/default/keyboard
+      line: "{{ item.line }}"
+      regexp: "{{ item.regexp }}"
+    loop:
+    - { line: 'XKBMODEL="pc105"',  regexp: "^XKBMODEL=\".*\"" }
+    - { line: 'XKBLAYOUT="us"',    regexp: "^XKBLAYOUT=\".*\"" }
+    - { line: 'XKBVARIANT="euro"', regexp: "^XKBVARIANT=\".*\"" }
+    - { line: 'XKBOPTIONS=""',     regexp: "^XKBOPTIONS=\".*\"" }
+    become: yes
+    register: keyboard_settings
+    tags: [keyboard]
+
+  - name: Configure keyboard (step 2 of 2)
+    shell: "{{ item }}"
+    loop:
+    - 'dpkg-reconfigure -f noninteractive keyboard-configuration'
+    - 'invoke-rc.d keyboard-setup start'
+    - "setsid sh -c 'exec setupcon -k --force <> /dev/tty1 >&0 2>&1'"
+    - 'udevadm trigger --subsystem-match=input --action=change'
+    become: yes
+    when: keyboard_settings.changed
+    tags: [keyboard]
+
+  - name: reboot machine
+    reboot:
+      test_command: whoami
+      reboot_timeout: 300
+      msg: Reboot initiated by Ansible
+    become: yes
+    when: host_name.changed or memory_split.changed
+    tags: [reboot]
+
+  - name: Run apt-get update # noqa 403 - This task is specifically created to perform an apt full-upgrade
+    apt:
+      autoremove: yes
+      state: latest
+      update_cache: yes
+      upgrade: full
+    become: yes
+    tags: [apt]
+
+  - name: reboot machine
+    reboot:
+      test_command: whoami
+      reboot_timeout: 300
+      msg: Reboot initiated by Ansible
+    become: yes
+    tags: [apt, reboot]

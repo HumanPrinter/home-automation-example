@@ -1,0 +1,10 @@
+- hosts: domotica
+  roles:
+  - role: ssh
+  - role: common_tasks
+  - role: common_tools
+  - role: dockerhost
+  - role: rpi_monitor
+  - role: mount_usbdrive
+    mount_device: sdb
+    mount_partition: sdb1

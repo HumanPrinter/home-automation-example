@@ -1,0 +1,4 @@
+- hosts: pihole
+  gather_facts: no
+  roles:
+  - role: pihole

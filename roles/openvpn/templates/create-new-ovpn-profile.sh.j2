@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo Enter the name of the profile that must be created
+
+read profilename
+
+sudo rm -f /dockermnt/openvpn/conf/pki/issued/$profilename.crt
+sudo rm -f /dockermnt/openvpn/conf/pki/reqs/$profilename.req
+sudo rm -f /dockermnt/openvpn/conf/pki/private/$profilename.key
+
+docker run -v /dockermnt/openvpn/conf:/etc/openvpn --rm -it dockerreponame.azurecr.io/pi/openvpn:{{ openvpn.version }} easyrsa build-client-full $profilename
+docker run -v /dockermnt/openvpn/conf:/etc/openvpn --rm dockerreponame.azurecr.io/pi/openvpn:{{ openvpn.version }} ovpn_getclient $profilename > /dockermnt/openvpn/ovpn-profiles/$profilename.ovpn

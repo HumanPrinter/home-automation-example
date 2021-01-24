@@ -1,0 +1,42 @@
+- name: Include vaulted variables
+  include_vars: vault.yml
+  tags: [docker-container]
+
+- name: Create mount directories
+  include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    mounts:
+    - { source: vscode/ }
+  tags: [docker-mounts]
+
+- debug:
+    var: vscode.version
+
+- name: Deploy Docker container
+  include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "vscode"
+    container_image: "linuxserver/code-server"
+    container_tag: "version-{{ vscode.version }}"
+    exposed_ports: "8443:8443"
+    labels:
+      diun.enable: "true"
+      diun.watch_repo: "true"
+      diun.include_tags: "^version\\-v\\d+(\\.\\d+)+$"
+      diun.max_tags: "10"
+    mounts:
+    - { source: /dockermnt/vscode,               target: /config,    read_only: "no", type: bind }
+    - { source: /dockermnt/hassio/homeassistant, target: /ha_config, read_only: "no", type: bind }
+    environment_variables:
+      TZ: "Europe/Amsterdam"
+      DOCKER_MODS: "stecky/mods:code-server-home-assistant"
+      HOMEASSISTANT_URL: "{{ vscode.settings.homeassistant_hostUrl }}"
+      HOMEASSISTANT_TOKEN: "{{ vscode.settings.homeassistant_longLivedAccessToken }}"
+      PUID: "0"
+      PGID: "0"
+
+  tags: [docker-container]

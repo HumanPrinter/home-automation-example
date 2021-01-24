@@ -1,0 +1,7 @@
+- name: Include the prepare tasks
+  include_tasks: prepare.yml
+  tags: [docker-container, prepare]
+
+- name: Include the deploy tasks
+  include_tasks: deploy.yml
+  tags: [docker-container, deploy]

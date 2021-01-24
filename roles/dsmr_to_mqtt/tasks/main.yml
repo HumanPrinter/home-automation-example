@@ -1,0 +1,43 @@
+- name: Include vaulted variables
+  include_vars: vault.yml
+  tags: [docker-container]
+
+- name: Clone the git repository for DSMR-to-MQTT # noqa 401 The latest version is the right version
+  git:
+    dest: /home/pi/projects/dsmr-to-mqtt/
+    repo: 'git@ssh.dev.azure.com:v3/username/projectname/dsmr-to-mqtt'
+    clone: yes
+    update: yes
+    remote: origin
+  tags: [git-repo]
+
+- name: Build the Docker image
+  docker_image:
+    name: "dsmr-to-mqtt"
+    tag: "{{ dsmr_to_mqtt.version }}"
+    state: present
+    source: build
+    push: false
+    build:
+      path: /home/pi/projects/dsmr-to-mqtt/
+      pull: yes
+  tags: [docker-build]
+
+- name: Deploy Docker container
+  include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "dsmr-to-mqtt"
+    container_image: "dsmr-to-mqtt"
+    container_tag: "{{ dsmr_to_mqtt.version }}"
+    devices: "/dev/ttyUSB0"
+    mounts:
+    - { source: /etc/localtime,          target: /etc/localtime, read_only: "yes", type: bind }
+    - { source: /etc/timezone,           target: /etc/timezone,  read_only: "yes", type: bind }
+    environment_variables:
+      MQTT_USERNAME: "{{ dsmr_to_mqtt.mqtt_username }}"
+      MQTT_PASSWORD: "{{ dsmr_to_mqtt.mqtt_password }}"
+      MQTT_BROKER: "{{ dsmr_to_mqtt.mqtt_broker }}"
+      TZ: "Europe/Amsterdam"
+  tags: [docker-container]

@@ -1,0 +1,25 @@
+- name: Install some custom tools
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: present
+  become: yes
+  loop: "{{ install_tools }}"
+  tags: [custom-tools]
+
+- name: Remove some tools
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: absent
+  become: yes
+  loop: "{{ remove_tools }}"
+  tags: [custom-tools]
+
+- name: Add some custom pip packages
+  pip:
+    name: "{{ item }}"
+    state: present
+  become: yes
+  loop: "{{ pip_tools }}"
+  tags: [custom-tools]

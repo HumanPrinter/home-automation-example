@@ -1,0 +1,4 @@
+- hosts: domotica
+  gather_facts: no
+  roles:
+  - role: influxdb

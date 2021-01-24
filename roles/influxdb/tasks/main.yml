@@ -1,0 +1,107 @@
+- name: "Check if the influxdb database-file already exists"
+  stat:
+    path: /dockermnt/influxdb/data/data/
+  register: database_stat
+  tags: [prepare, docker-mounts]
+
+- include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    mounts:
+    - { source: influxdb/data/ }
+  when: "not database_stat.stat.exists"
+  tags: [prepare, docker-mounts]
+
+- name: Include vaulted variables
+  include_vars: vault.yml
+  tags: [prepare, cron, backup]
+
+- include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "influxdb_temp"
+    container_image: "influxdb"
+    container_tag: "{{ influxdb.version }}"
+    exposed_ports: "8086:8086"
+    command: /init-influxdb.sh
+    cleanup: "yes"
+    detach: "no"
+    restart_policy: "no"
+    environment_variables:
+      INFLUXDB_DB: "{{ influxdb.database_name }}"
+      INFLUXDB_ADMIN_USER: "{{ influxdb.admin_username }}"
+      INFLUXDB_ADMIN_PASSWORD: "{{ influxdb.admin_password }}"
+      INFLUXDB_USER: "{{ influxdb.default_username }}"
+      INFLUXDB_USER_PASSWORD: "{{ influxdb.default_userpassword }}"
+      INFLUXDB_READ_USER: "{{ influxdb.default_readusername }}"
+      INFLUXDB_READ_USER_PASSWORD: "{{ influxdb.default_readuserpassword }}"
+      TZ: "Europe/Amsterdam"
+    mounts:
+    - { source: /dockermnt/influxdb/data/, target: /var/lib/influxdb/, read_only: "no", type: bind }
+  when: "not database_stat.stat.exists"
+  tags: [prepare, docker-container]
+
+- include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    templates:
+    - { src: influxdb.conf.j2, dest: influxdb/config/influxdb.conf, mode: "644" }
+  tags: [deploy, docker-mounts]
+
+- include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "influxdb"
+    container_image: "influxdb"
+    container_tag: "{{ influxdb.version }}"
+    exposed_ports: "8086:8086"
+    # memory_limit: "500m"
+    environment_variables:
+      TZ: "Europe/Amsterdam"
+      INFLUXDB_DATA_INDEX_VERSION: "tsi1"
+    labels:
+      diun.enable: "true"
+      diun.watch_repo: "true"
+      diun.include_tags: "^\\d+(\\.\\d+)+$"
+      diun.max_tags: "10"
+    mounts:
+    - { source: /dockermnt/influxdb/config/influxdb.conf, target: /etc/influxdb/influxdb.conf, read_only: "yes", type: bind }
+    - { source: /dockermnt/influxdb/data/,                target: /var/lib/influxdb/,          read_only: "no",  type: bind }
+    - { source: /mnt/usbdrive/influxdb_backup/,           target: /backup/,                    read_only: "no",  type: bind }
+  tags: [deploy, docker-container]
+
+- name: Deploy the backup script for Influxdb
+  template:
+    dest: /usr/local/sbin/create_influxdb_backup.sh
+    src: create_influxdb_backup.sh.j2
+    owner: root
+    group: root
+    mode: "u=rwx,g=rx,o=r"
+  become: yes
+  tags: [cron, backup]
+
+- name: Create a cron job to create periodic back-ups
+  cron:
+    name: "Backup Influxdb"
+    job: "/usr/local/sbin/create_influxdb_backup.sh"
+    state: present
+    user: "root"
+    hour: "2"
+    minute: "30"
+  become: yes
+  tags: [cron, backup]
+
+- name: Create a cron job to remove old back-ups
+  cron:
+    name: "Remove old Influxdb backups"
+    job: "find /mnt/usbdrive/influxdb_backup -name '*-*-*' -type d -mtime +14 -exec rm -rf {} \\;"
+    state: present
+    user: "root"
+    hour: "2"
+    minute: "45"
+  become: yes
+  tags: [cron, backup]

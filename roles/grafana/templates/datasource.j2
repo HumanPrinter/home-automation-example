@@ -1,0 +1,18 @@
+# config file version
+apiVersion: 1
+
+# list of datasources to insert/update depending what's available in the database
+datasources:
+- name: {{ influxdb.database_name }}
+  type: influxdb
+  access: proxy
+  orgId: 1
+  url: http://influxdb.lan:8086
+  user: {{ influxdb.default_readusername }}
+  database: {{ influxdb.database_name }}
+  basicAuth: false
+  withCredentials: false
+  isDefault: true
+  secureJsonData:
+    password: {{ influxdb.default_readuserpassword }}
+  version: 1

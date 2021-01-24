@@ -1,0 +1,39 @@
+- name: Include vaulted variables
+  include_vars: vault.yml
+  tags: [docker-mounts]
+
+- include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    templates:
+    - { src: grafana.ini.j2,                        dest: grafana/config/grafana.ini }
+    - { src: datasource.j2,                         dest: grafana/config/provisioning/datasources/datasource.yml }
+    - { src: notifier.j2,                           dest: grafana/config/provisioning/notifiers/notifier.yml }
+    - { src: dashboard.j2,                          dest: grafana/config/provisioning/dashboards/dashboard.yml }
+    - { src: dashboard_omnikinverterdata.j2,        dest: grafana/config/provisioning/dashboards/omnikinverterdata.json }
+    - { src: dashboard_shellymonitoring.j2,         dest: grafana/config/provisioning/dashboards/shellymonitoring.json }
+    - { src: dashboard_slimmemeter.j2,              dest: grafana/config/provisioning/dashboards/slimmemeter.json }
+    - { src: dashboard_stroomverbruikhuishouden.j2, dest: grafana/config/provisioning/dashboards/stroomverbruikhuishouden.json }
+    - { src: dashboard_energiekosten.j2,            dest: grafana/config/provisioning/dashboards/energiekosten.json }
+  tags: [docker-mounts]
+
+- include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "grafana"
+    container_image: "grafana/grafana"
+    container_tag: "{{ grafana.version }}"
+    exposed_ports: "3000:3000"
+    environment_variables:
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+      TZ: "Europe/Amsterdam"
+    labels:
+      diun.enable: "true"
+      diun.watch_repo: "true"
+      diun.include_tags: "^\\d+(\\.\\d+)+$"
+      diun.max_tags: "10"
+    mounts:
+    - { source: /dockermnt/grafana/config/, target: /etc/grafana/, read_only: "yes", type: bind }
+  tags: [docker-container]

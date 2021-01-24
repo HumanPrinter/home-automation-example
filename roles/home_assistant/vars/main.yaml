@@ -1,0 +1,7 @@
+homeassistant:
+  github_token: "{{ vault_github_token }}"
+  location_home:
+    latitude: "{{ vault_location_home_latitude }}"
+    longitude: "{{ vault_location_home_longitude }}"
+  external_url: "{{ vault_external_url }}"
+  mqtt_password: "{{ vault_mqtt_password }}"

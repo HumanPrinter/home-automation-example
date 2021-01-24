@@ -1,0 +1,29 @@
+- name: Retrieve the name of any container with the same basename
+  shell: "docker ps --format '{{ '{{' }}.Names{{ '}}' }}' -f 'name={{ container_basename }}_*'"
+  register: container_stat
+  changed_when: false
+  tags: [docker-container, prepare]
+
+- name: Fetch the new image
+  docker_image:
+    name: "{{ container_image }}"
+    tag: "{{ container_tag }}"
+    state: present
+    source: pull
+  when: "(container_basename + '_' + container_tag) != container_stat.stdout"
+  tags: [docker-container, prepare]
+
+- name: Change the restart policy of the existing container to 'no'
+  command: "docker update --restart=no {{ container_stat.stdout }}"
+  when: "container_stat.stdout | length > 0 and (container_basename + '_' + container_tag) != container_stat.stdout"
+  tags: [docker-container, prepare]
+
+- name: Stop the existing container
+  command: "docker stop {{ container_stat.stdout }}"
+  when: "container_stat.stdout | length > 0 and (container_basename + '_' + container_tag) != container_stat.stdout"
+  tags: [docker-container, prepare]
+
+- name: Set preperation result as variable
+  set_fact:
+    existing_container_is_stopped: "{{ container_stat.stdout | length > 0 and (container_basename + '_' + container_tag) != container_stat.stdout }}"
+  tags: [docker-container, prepare]

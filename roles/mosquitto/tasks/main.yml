@@ -1,0 +1,69 @@
+- name: "Check if the passwd-file already exists"
+  stat:
+    path: /dockermnt/mosquitto/config/passwd
+  register: passwd_stat
+  tags: [prepare, docker-mounts]
+
+- name: Include vaulted variables
+  include_vars: vault.yml
+  tags: [prepare]
+
+- include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    templates:
+    - { src: mosquitto_passwd.j2, dest: mosquitto/config/passwd }
+    mounts:
+    - { source: mosquitto/config/ }
+  when: "not passwd_stat.stat.exists"
+  tags: [prepare, docker-mounts]
+
+- include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "mosquitto_temp"
+    container_image: "eclipse-mosquitto"
+    container_tag: "{{ mosquitto.version }}"
+    command: mosquitto_passwd -U /mosquitto_temp/passwd
+    cleanup: "yes"
+    detach: "no"
+    restart_policy: "no"
+    mounts:
+    - { source: /dockermnt/mosquitto/config/, target: /mosquitto_temp/, read_only: "no",  type: bind }
+    - { source: /etc/localtime,               target: /etc/localtime,   read_only: "yes", type: bind }
+    - { source: /etc/timezone,                target: /etc/timezone,    read_only: "yes", type: bind }
+  when: "not passwd_stat.stat.exists"
+  tags: [prepare, docker-container]
+
+- include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    templates:
+    - { src: mosquitto.conf.j2, dest: mosquitto/config/mosquitto.conf }
+    mounts:
+    - { source: mosquitto/config/ }
+    - { source: mosquitto/data/ }
+  tags: [deploy, docker-mounts]
+
+- include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "mosquitto"
+    container_image: "eclipse-mosquitto"
+    container_tag: "{{ mosquitto.version }}"
+    exposed_ports: "1883:1883"
+    labels:
+      diun.enable: "true"
+      diun.watch_repo: "true"
+      diun.exclude_tags: "openssl;latest;.*-openssl"
+      diun.max_tags: "10"
+    mounts:
+    - { source: /dockermnt/mosquitto/config/, target: /mosquitto/config/, read_only: "no",  type: bind }
+    - { source: /dockermnt/mosquitto/data/,   target: /mosquitto/data/,   read_only: "no",  type: bind }
+    - { source: /etc/localtime,               target: /etc/localtime,     read_only: "yes", type: bind }
+    - { source: /etc/timezone,                target: /etc/timezone,      read_only: "yes", type: bind }
+  tags: [deploy, docker-container]

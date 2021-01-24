@@ -1,0 +1,57 @@
+- name: Include vaulted variables
+  include_vars: vault.yml
+  tags: [rpi_monitor]
+
+- name: "Add daemon user to the 'video' group"
+  user:
+    name: daemon
+    append: yes
+    groups: video
+  become: yes
+  tags: [rpi_monitor]
+
+- name: "Ensure the target directory for the RPi-Reporter-MQTT2HA-Daemon exists"
+  file:
+    path: /opt/RPi-Reporter-MQTT2HA-Daemon/
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+  become: yes
+  tags: [rpi_monitor]
+
+- name: "Unpack the downloaded release archive"
+  unarchive:
+    src: "https://github.com/ironsheep/RPi-Reporter-MQTT2HA-Daemon/archive/v{{ rpi_monitor.version }}.tar.gz"
+    dest: /opt/RPi-Reporter-MQTT2HA-Daemon/
+    remote_src: yes
+    extra_opts: [--strip-components=1]
+  become: yes
+  tags: [rpi_monitor]
+
+- name: "Install the PIP requirements"
+  pip:
+    requirements: /opt/RPi-Reporter-MQTT2HA-Daemon/requirements.txt
+    state: present
+  become: yes
+  tags: [rpi_monitor]
+
+- name: "Create the configuration file"
+  template:
+    src: config.ini.j2
+    dest: /opt/RPi-Reporter-MQTT2HA-Daemon/config.ini
+    mode: "664"
+  become: yes
+  tags: [rpi_monitor]
+
+- name: "Create a link to the service file"
+  file:
+    src: /opt/RPi-Reporter-MQTT2HA-Daemon/isp-rpi-reporter.service
+    path: /etc/systemd/system/isp-rpi-reporter.service
+    state: link
+  become: yes
+  notify: Start rpi_monitor
+  tags: [rpi_monitor]
+
+- meta: flush_handlers
+  tags: [rpi_monitor]

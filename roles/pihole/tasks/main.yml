@@ -1,0 +1,56 @@
+- name: Include vaulted variables
+  include_vars: vault.yml
+  tags: [docker-container]
+
+- name: Create mount directories
+  include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    mounts:
+    - { source: pihole/ }
+  tags: [docker-mounts]
+
+- name: Check if there is already a git repository present
+  stat:
+    path: /dockermnt/pihole/.git/
+  register: git_repo
+  tags: [git-repo]
+
+- name: Clone the git repository for PiHole # noqa 401 The latest version is the right version
+  git:
+    dest: /dockermnt/pihole/
+    repo: 'git@ssh.dev.azure.com:v3/username/projectname/pihole'
+    clone: yes
+    update: no
+    remote: origin
+  when: not git_repo.stat.exists
+  tags: [git-repo]
+
+- name: Deploy Docker container
+  include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "pihole"
+    container_image: "pihole/pihole"
+    container_tag: "{{ pihole.version }}"
+    capabilities:
+    - NET_ADMIN
+    network_mode: "host"
+    dns_servers:
+    - 127.0.0.1
+    - 192.168.100.1
+    environment_variables:
+      TZ: "Europe/Amsterdam"
+      WEBPASSWORD: "{{ pihole.admin_password }}"
+      ServerIP: "{{ pihole.ipaddress }}"
+    labels:
+      diun.enable: "true"
+      diun.watch_repo: "true"
+      diun.include_tags: "^v\\d+(\\.\\d+)+$"
+      diun.max_tags: "10"
+    mounts:
+    - { source: /dockermnt/pihole/conf,    target: /etc/pihole,    read_only: "no", type: bind }
+    - { source: /dockermnt/pihole/dnsmasq, target: /etc/dnsmasq.d, read_only: "no", type: bind }
+  tags: [docker-container]

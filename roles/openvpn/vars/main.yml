@@ -1,0 +1,6 @@
+openvpn:
+  version: 20200629
+
+azurecr:
+  username: your-azurecr-username
+  password: "{{ vault_azurecr_password }}"

@@ -1,0 +1,23 @@
+- name: Create and start Docker container
+  docker_container:
+    name: "{{ container_basename }}_{{ container_tag }}"
+    image: "{{ container_image }}:{{ container_tag }}"
+    container_default_behavior: compatibility
+    capabilities: "{{ capabilities | default([]) }}"
+    cleanup: "{{ cleanup | default('no') }}"
+    detach: "{{ detach | default('yes') }}"
+    devices: "{{ devices | default([]) }}"
+    dns_servers: "{{ dns_servers | default([]) }}"
+    env: "{{ environment_variables | default({}) }}"
+    labels: "{{ labels | default({}) }}"
+    command: "{{ command | default(None) }}"
+    memory: "{{ memory_limit | default(None) }}"
+    network_mode: "{{ network_mode | default('bridge') }}"
+    published_ports: "{{ exposed_ports | default([]) }}"
+    state: started
+    restart_policy: "{{ restart_policy | default ('always') }}"
+    mounts: "{{ mounts | default([]) }}"
+    comparisons:
+      '*': strict
+  when: "condition | default(True)"
+  tags: [docker-container, deploy]

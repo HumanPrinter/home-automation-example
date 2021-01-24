@@ -1,0 +1,38 @@
+- name: Create mount directories
+  include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    mounts:
+    - { source: unifi/ }
+  tags: [docker-mounts]
+
+- name: Deploy Docker container
+  include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "unifi_controller"
+    container_image: "linuxserver/unifi-controller"
+    container_tag: "version-{{ unifi_controller.version }}"
+    exposed_ports:
+    - "3478:3478/udp"   # Unifi STUN port
+    - "10001:10001/udp" # Required for AP discovery
+    - "8080:8080"       # Required for device communication
+    - "8443:8443"       # Unifi web admin port
+    - "1900:1900/udp"   # Required for 'Make controller discoverable on L2 network' option
+    - "8843:8843"       # Unifi guest portal HTTPS redirect port
+    - "8880:8880"       # Unifi guest portal HTTP redirect port
+    - "6789:6789"       # For mobile throughput test
+    - "5514:5514"       # Remote syslog port
+    labels:
+      diun.enable: "true"
+      diun.watch_repo: "true"
+      diun.include_tags: "^version-\\d+(\\.\\d+)+$"
+      diun.max_tags: "10"
+    environment_variables:
+      PUID: "{{ uid_management_user | string }}"
+      PGID: "{{ gid_management_user | string }}"
+    mounts:
+    - { source: /dockermnt/unifi, target: /config, read_only: "no", type: bind }
+  tags: [docker-container]

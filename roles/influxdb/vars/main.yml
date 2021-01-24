@@ -1,0 +1,9 @@
+influxdb:
+  version: 1.8.3
+  database_name: homeautomation
+  admin_username: admin
+  admin_password: "{{ vault_influx_admin_password }}"
+  default_username: "openhab"
+  default_userpassword: "{{ vault_influx_defaultuser_password }}"
+  default_readusername: "grafana"
+  default_readuserpassword: "{{ vault_influx_defaultreaduser_password }}"

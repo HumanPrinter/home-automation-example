@@ -1,0 +1,4 @@
+rpi_monitor:
+  version: 1.5.4
+  mqtt_user: rpimonitor
+  mqtt_password: "{{ vault_rpi_monitor_mqtt_password }}"

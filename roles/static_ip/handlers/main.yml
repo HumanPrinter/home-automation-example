@@ -1,0 +1,15 @@
+- name: start dhcpcd
+  systemd:
+    name: dhcpcd
+    enabled: yes
+    state: started
+  become: yes
+  tags: [static-ip]
+
+- name: reboot machine
+  reboot:
+    test_command: whoami
+    reboot_timeout: 300
+    msg: Reboot initiated by Ansible
+  become: yes
+  tags: [static-ip]

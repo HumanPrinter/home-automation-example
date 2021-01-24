@@ -1,0 +1,4 @@
+- hosts: homeassistant
+  gather_facts: no
+  roles:
+  - role: vscode

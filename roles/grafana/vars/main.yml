@@ -1,0 +1,12 @@
+grafana:
+  version: 7.3.7
+  smtp:
+    host: your.smtp.server
+    port: 25
+    user: your@email.com
+    password: "{{ vault_grafana_smtp_password }}"
+
+influxdb:
+  database_name: homeautomation
+  default_readusername: "grafana"
+  default_readuserpassword: "{{ vault_influx_defaultreaduser_password }}"

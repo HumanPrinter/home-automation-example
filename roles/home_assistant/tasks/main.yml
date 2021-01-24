@@ -1,0 +1,87 @@
+- name: Ensure the dockermnt directory exists
+  file:
+    path: /dockermnt
+    state: directory
+    owner: "{{ management_user }}"
+    group: docker
+    mode: "775"
+  become: yes
+  tags: [home-assistant, git-repo]
+
+- name: Check if there is already a git repository present
+  stat:
+    path: /dockermnt/hassio/.git/
+  register: git_repo
+  tags: [home-assistant, git-repo]
+
+- name: Clone the git repository for Hassio to a temporary location # noqa 401 The latest version is the right version
+  git:
+    dest: /dockermnt/hassio/
+    repo: 'git@ssh.dev.azure.com:v3/username/projectname/home-assistant'
+    clone: yes
+    update: no
+    remote: origin
+  when: not git_repo.stat.exists
+  tags: [home-assistant, git-repo]
+
+- name: Change the ownership of the cloned directories
+  file:
+    path: "/dockermnt/hassio/{{ item }}/"
+    recurse: yes
+    owner: 'root'
+    group: 'root'
+  become: yes
+  loop:
+  - addons
+  - audio
+  - backup
+  - dns
+  - homeassistant
+  - tmp
+  when: not git_repo.stat.exists
+  tags: [home-assistant, git-repo]
+
+- name: Change the ownership of the cloned files
+  file:
+    path: "/dockermnt/hassio/{{ item }}"
+    owner: 'root'
+    group: 'root'
+  become: yes
+  loop:
+  - addons.json
+  - audio.json
+  - cli.json
+  - config.json
+  - dns.json
+  - homeassistant.json
+  - ingress.json
+  - multicast.json
+  - updater.json
+  when: not git_repo.stat.exists
+  tags: [home-assistant, git-repo]
+
+- name: Include vaulted variables
+  include_vars: vault.yml
+  tags: [home-assistant, git-repo]
+
+- name: Add the secrets.yaml file
+  template:
+    src: secrets.yaml.j2
+    dest: /dockermnt/hassio/homeassistant/secrets.yaml
+    mode: "644"
+  become: yes
+  tags: [home-assistant, git-repo]
+
+- include: install.yml
+  tags: [home-assistant, home-assistant-install]
+
+- name: Create a cron job to copy all available snapshots to the USB-drive
+  cron:
+    name: "Backup and manage Hass.io snapshots"
+    job: "cp -u --preserve=timestamps /dockermnt/hassio/backup/*.tar /mnt/usbdrive/hassio_snapshots/; ls -t /dockermnt/hassio/backup/*.tar | tail -n +2 | xargs rm --;find /mnt/usbdrive/hassio_snapshots -name '*.tar' -type f -mtime +14 -exec rm -rf {} \\;"
+    state: present
+    user: "root"
+    hour: "2"
+    minute: "00"
+  become: yes
+  tags: [home-assistant, cron]

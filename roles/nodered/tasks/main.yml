@@ -1,0 +1,37 @@
+- name: Include vaulted variables
+  include_vars: vault.yml
+
+- include_role:
+    name: dockermounts
+    tasks_from: main
+  vars:
+    templates:
+    - { src: nodered_sshconfig.j2,   dest: node-red/home/.ssh/config, group: pi, mode: '600' }
+    - { src: nodered_knownhosts.j2,  dest: node-red/home/.ssh/known_hosts, group: pi, mode: '644' }
+    - { src: nodered_settings.js.j2, dest: node-red/data/settings.js, group: pi }
+    - { src: nodered_privatekey.j2,  dest: node-red/data/projects/.sshkeys/__default_Azure_DevOps, group: pi, mode: '600' }
+    - { src: nodered_publickey.j2,   dest: node-red/data/projects/.sshkeys/__default_Azure_DevOps.pub, group: pi, mode: '600' }
+    mounts:
+    - { source: node-red/data/, group: pi }
+    - { source: node-red/home/, group: pi }
+  tags: [docker-mounts]
+
+- include_role:
+    name: dockercontainer
+    tasks_from: default
+  vars:
+    container_basename: "nodered"
+    container_image: "nodered/node-red"
+    container_tag: "{{ nodered.version }}"
+    exposed_ports: "1880:1880"
+    environment_variables:
+      TZ: "Europe/Amsterdam"
+    labels:
+      diun.enable: "true"
+      diun.watch_repo: "true"
+      diun.include_tags: "^\\d+(\\.\\d+)+\\-12$"
+      diun.max_tags: "10"
+    mounts:
+    - { source: /dockermnt/node-red/data/, target: /data/,                       read_only: "no", type: bind }
+    - { source: /dockermnt/node-red/home/.ssh/, target: /usr/src/node-red/.ssh/, read_only: "no", type: bind }
+  tags: [docker-container]

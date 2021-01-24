@@ -1,0 +1,4 @@
+- hosts: portainer_slaves
+  gather_facts: no
+  roles:
+  - role: portainer_agent

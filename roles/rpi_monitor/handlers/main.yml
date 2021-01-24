@@ -1,0 +1,8 @@
+- name: Start rpi_monitor
+  systemd:
+    name: isp-rpi-reporter.service
+    enabled: yes
+    daemon_reload: yes
+    state: started
+  become: yes
+  tags: [rpi_monitor]

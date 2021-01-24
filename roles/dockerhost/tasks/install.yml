@@ -1,0 +1,42 @@
+- name: Check for existence of Docker installation marker
+  stat:
+    path: /root/.docker_installed
+  become: yes
+  register: docker_installed
+  tags: [docker, docker-install]
+
+- name: Download Docker install script
+  get_url:
+    url: https://get.docker.com
+    dest: /tmp/docker-install.sh
+    mode: "a+x"
+  when: "not docker_installed.stat.exists"
+  tags: [docker, docker-install]
+
+- name: Execute the Docker install script
+  command: /bin/sh /tmp/docker-install.sh
+  become: yes
+  when: "not docker_installed.stat.exists"
+  tags: [docker, docker-install]
+
+- name: Remove the install script
+  file:
+    path: /tmp/docker-install.sh
+    state: absent
+  tags: [docker, docker-install]
+
+- name: Set Docker to auto-start
+  service:
+    name: docker
+    enabled: true
+    state: started
+  tags: [docker, docker-install]
+
+- name: Save a file to mark the installation of Docker
+  file:
+    path: /root/.docker_installed
+    state: touch
+    mode: 0444
+  become: yes
+  when: "not docker_installed.stat.exists"
+  tags: [docker, docker-install]

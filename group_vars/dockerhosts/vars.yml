@@ -1,0 +1,6 @@
+ssh:
+  public_key: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDhg+Czfh96n/bf2OaFr5x3kknwJ7VOJzX0PmiC+GZwz0KklVy8K/cyHOGfnC2ucFOhZV4AGxcrdUpjX9vW9hYes9tJJe/1C9HQecgA4HaQToM0KiAJnL+1ZZuGk4ohH3m31aSWeyrJ1max5u4cWIRn3RwYpxcTgZNabUpRoV1WjJxVx9U1Yl6H5rBlcUAZ+PSEhFJjpWQomoRsgAlUih9RJnrvXAMx6eueGUb8Uwi1DSuj673hMXb/DvxiKzDh/SLlShkCqMZOKZ19tI7+BeLt8IlQMZJ7kj/5LoNm5HiNdethosWOQIYHUCsEF9Xw0uVVC9lHdsMJbYQw0WgDxnZp oscar@TABLET
+
+docker_hub:
+  username: your-docker-username
+  password: "{{ vault_docker_hub_password }}"

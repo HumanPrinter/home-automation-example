@@ -1,0 +1,14 @@
+- name: "Configure dhcpcd"
+  blockinfile:
+    path: /etc/dhcpcd.conf
+    state: present
+    block: |
+      interface eth0
+      static ip_address={{ static_ip }}/24
+      static routers={{ gateway }}
+      static domain_name_servers={{ dns | join(' ') }}
+  become: yes
+  notify:
+  - start dhcpcd
+  - reboot machine
+  tags: [static-ip]

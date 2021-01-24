@@ -1,0 +1,13 @@
+- hosts: pihole
+  roles:
+  - role: ssh
+  - role: common_tasks
+  - role: common_tools
+  - role: dockerhost
+  - role: rpi_monitor
+  - role: static_ip
+    static_ip: 192.168.100.250
+    gateway: 192.168.100.1
+    dns:
+    - 127.0.0.1
+    - "{{ gateway }}"
